@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Login · KeyCheck Admin</title>
+  <script defer src="/static/vendor/alpine.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f3f4f6;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.08);
+      padding: 2.5rem;
+      width: 100%;
+      max-width: 360px;
+    }
+    h1 { font-size: 1.5rem; margin-bottom: .25rem; }
+    .sub { color: #6b7280; font-size: .9rem; margin-bottom: 1.5rem; }
+    label { display: block; font-size: .85rem; font-weight: 600; margin: 1rem 0 .35rem; }
+    input {
+      width: 100%;
+      padding: .6rem .75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: .95rem;
+    }
+    input:focus { outline: 2px solid #2563eb; border-color: transparent; }
+    button {
+      width: 100%;
+      margin-top: 1.5rem;
+      padding: .7rem;
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: .95rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:hover { background: #1d4ed8; }
+    button:disabled { opacity: .6; cursor: not-allowed; }
+    .error {
+      margin-top: 1rem;
+      padding: .6rem .75rem;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #b91c1c;
+      border-radius: 8px;
+      font-size: .85rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>KeyCheck Admin</h1>
+    <div class="sub">Sign in to manage license keys</div>
+
+    <form @submit.prevent="doLogin" x-data="login()">
+      <label for="username">Username</label>
+      <input id="username" type="text" x-model="username" autocomplete="username" required>
+
+      <label for="password">Password</label>
+      <input id="password" type="password" x-model="password" autocomplete="current-password" required>
+
+      <button type="submit" :disabled="loading" x-text="loading ? 'Signing in…' : 'Sign in'"></button>
+
+      <div class="error" x-show="error" x-text="error"></div>
+    </form>
+  </div>
+
+  <script>
+    function login() {
+      return {
+        username: '',
+        password: '',
+        error: '',
+        loading: false,
+        async doLogin() {
+          this.error = '';
+          this.loading = true;
+          try {
+            const res = await fetch('/api/auth/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ username: this.username, password: this.password }),
+            });
+            if (!res.ok) {
+              const body = await res.json().catch(() => ({}));
+              throw new Error(body.detail || 'Login failed');
+            }
+            const data = await res.json();
+            localStorage.setItem('keycheck_token', data.access_token);
+            window.location.href = '/dashboard';
+          } catch (e) {
+            this.error = e.message;
+          } finally {
+            this.loading = false;
+          }
+        },
+      };
+    }
+  </script>
+</body>
+</html>

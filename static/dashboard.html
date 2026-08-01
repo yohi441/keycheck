@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard · KeyCheck Admin</title>
+  <script defer src="/static/vendor/alpine.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #f3f4f6; color: #111827; }
+    header {
+      background: #1f2937;
+      color: #fff;
+      padding: .9rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header h1 { font-size: 1.1rem; }
+    header button {
+      background: #374151;
+      color: #fff;
+      border: 1px solid #4b5563;
+      border-radius: 8px;
+      padding: .45rem .9rem;
+      cursor: pointer;
+      font-size: .85rem;
+    }
+    header button:hover { background: #4b5563; }
+    main { max-width: 960px; margin: 1.5rem auto; padding: 0 1rem; }
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+      padding: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+    .card h2 { font-size: 1rem; margin-bottom: 1rem; }
+    .error {
+      padding: .6rem .75rem;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #b91c1c;
+      border-radius: 8px;
+      font-size: .85rem;
+      margin-bottom: 1rem;
+    }
+    label { font-size: .8rem; font-weight: 600; display: block; margin-bottom: .25rem; }
+    .row { display: flex; gap: .75rem; flex-wrap: wrap; align-items: flex-end; }
+    .field { flex: 1; min-width: 150px; }
+    input, select {
+      width: 100%;
+      padding: .5rem .6rem;
+      border: 1px solid #d1d5db;
+      border-radius: 7px;
+      font-size: .9rem;
+    }
+    input:focus, select:focus { outline: 2px solid #2563eb; border-color: transparent; }
+    button.primary {
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      padding: .55rem 1rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button.primary:hover { background: #1d4ed8; }
+    button.primary:disabled { opacity: .6; cursor: not-allowed; }
+    button.danger {
+      background: #fff;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+      border-radius: 7px;
+      padding: .4rem .8rem;
+      cursor: pointer;
+      font-size: .8rem;
+    }
+    button.danger:hover { background: #fef2f2; }
+    table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    th, td { text-align: left; padding: .6rem .5rem; border-bottom: 1px solid #e5e7eb; }
+    th { color: #6b7280; font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; }
+    code { font-family: ui-monospace, monospace; font-size: .85rem; }
+    .badge {
+      display: inline-block;
+      padding: .15rem .55rem;
+      border-radius: 999px;
+      font-size: .72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .badge.active { background: #dcfce7; color: #166534; }
+    .badge.revoked { background: #fee2e2; color: #991b1b; }
+    .pager { display: flex; align-items: center; gap: .75rem; margin-top: 1rem; font-size: .85rem; color: #6b7280; }
+    .pager button { background: #fff; border: 1px solid #d1d5db; border-radius: 7px; padding: .35rem .75rem; cursor: pointer; }
+    .pager button:disabled { opacity: .4; cursor: not-allowed; }
+    .check-result { margin-top: .75rem; padding: .75rem; border-radius: 8px; font-size: .9rem; }
+    .check-result.ok { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; }
+    .check-result.fail { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+    .muted { color: #6b7280; }
+    .empty { color: #9ca3af; text-align: center; padding: 1.5rem 0; }
+  </style>
+</head>
+<body x-data="dashboard()" x-init="init()">
+
+  <header>
+    <h1>KeyCheck Admin</h1>
+    <button @click="logout">Sign out</button>
+  </header>
+
+  <main>
+    <div class="error" x-show="error" x-text="error"></div>
+
+    <div class="card" x-show="checkResult">
+      <h2>Last check</h2>
+      <div class="check-result" :class="checkResult && checkResult.valid ? 'ok' : 'fail'">
+        <template x-if="checkResult">
+          <span>
+            <strong x-text="checkResult.valid ? 'VALID' : checkResult.status.toUpperCase()"></strong>
+            <span x-text="checkResult.reason ? ' — ' + checkResult.reason : ''"></span>
+            <template x-if="checkResult.remaining_uses !== null && checkResult.remaining_uses !== undefined">
+              <span x-text="' — remaining uses: ' + checkResult.remaining_uses"></span>
+            </template>
+          </span>
+        </template>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Check a key</h2>
+      <div class="row">
+        <div class="field">
+          <label for="checkkey">License key</label>
+          <input id="checkkey" type="text" x-model="checkKey" placeholder="XXXX-XXXX-XXXX-XXXX" @keyup.enter="check">
+        </div>
+        <button class="primary" @click="check">Check</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Create key</h2>
+      <form @submit.prevent="createKey">
+        <div class="row">
+          <div class="field">
+            <label for="maxuses">Max uses</label>
+            <input id="maxuses" type="number" min="1" x-model.number="newKey.max_uses" required>
+          </div>
+          <div class="field">
+            <label for="expires">Expires in (days, blank = never)</label>
+            <input id="expires" type="number" min="0" x-model="newKey.expires_in_days" placeholder="Never">
+          </div>
+          <button class="primary" type="submit" :disabled="creating" x-text="creating ? 'Creating…' : 'Create key'"></button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Keys <span class="muted" x-text="'(' + total + ' total)'"></span></h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Key</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th>Expires</th>
+            <th>Uses</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="k in keys" :key="k.key">
+            <tr>
+              <td><code x-text="k.key"></code></td>
+              <td><span class="badge" :class="k.status" x-text="k.status"></span></td>
+              <td x-text="formatDate(k.created_at)"></td>
+              <td x-text="k.expires_at ? formatDate(k.expires_at) : 'Never'"></td>
+              <td x-text="k.used_uses + ' / ' + k.max_uses"></td>
+              <td>
+                <button class="danger" x-show="k.status === 'active'" @click="revokeKey(k.key)">Revoke</button>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+      <div class="empty" x-show="!loading && keys.length === 0">No keys yet — create one above.</div>
+      <div class="pager">
+        <button @click="prevPage" :disabled="offset === 0">‹ Prev</button>
+        <span x-text="(keys.length ? offset + 1 : 0) + '–' + (offset + keys.length) + ' of ' + total"></span>
+        <button @click="nextPage" :disabled="offset + limit >= total">Next ›</button>
+        <select x-model.number="limit" @change="offset = 0; loadKeys()">
+          <option :value="10">10 / page</option>
+          <option :value="25">25 / page</option>
+          <option :value="50">50 / page</option>
+        </select>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    function dashboard() {
+      return {
+        token: '',
+        keys: [],
+        total: 0,
+        limit: 10,
+        offset: 0,
+        loading: false,
+        creating: false,
+        error: '',
+        newKey: { max_uses: 1, expires_in_days: '' },
+        checkKey: '',
+        checkResult: null,
+
+        async init() {
+          this.token = localStorage.getItem('keycheck_token');
+          if (!this.token) {
+            window.location.href = '/login';
+            return;
+          }
+          await this.loadKeys();
+        },
+        authHeaders() {
+          return { 'Authorization': 'Bearer ' + this.token, 'Content-Type': 'application/json' };
+        },
+        logout() {
+          localStorage.removeItem('keycheck_token');
+          window.location.href = '/login';
+        },
+        async loadKeys() {
+          this.loading = true;
+          this.error = '';
+          try {
+            const res = await fetch(`/api/keys?limit=${this.limit}&offset=${this.offset}`, { headers: this.authHeaders() });
+            if (res.status === 401) { this.logout(); return; }
+            if (!res.ok) throw new Error('Failed to load keys');
+            const data = await res.json();
+            this.keys = data.items;
+            this.total = data.total;
+          } catch (e) {
+            this.error = e.message;
+          } finally {
+            this.loading = false;
+          }
+        },
+        async createKey() {
+          this.creating = true;
+          this.error = '';
+          try {
+            const payload = { max_uses: parseInt(this.newKey.max_uses, 10) || 1 };
+            if (this.newKey.expires_in_days !== '' && this.newKey.expires_in_days !== null) {
+              payload.expires_in_days = parseInt(this.newKey.expires_in_days, 10);
+            }
+            const res = await fetch('/api/keys', {
+              method: 'POST',
+              headers: this.authHeaders(),
+              body: JSON.stringify(payload),
+            });
+            if (!res.ok) throw new Error('Failed to create key');
+            this.newKey = { max_uses: 1, expires_in_days: '' };
+            this.offset = 0;
+            await this.loadKeys();
+          } catch (e) {
+            this.error = e.message;
+          } finally {
+            this.creating = false;
+          }
+        },
+        async revokeKey(key) {
+          const res = await fetch(`/api/keys/${encodeURIComponent(key)}/revoke`, {
+            method: 'POST',
+            headers: this.authHeaders(),
+          });
+          if (!res.ok) {
+            this.error = 'Failed to revoke key';
+            return;
+          }
+          await this.loadKeys();
+        },
+        async check() {
+          if (!this.checkKey.trim()) return;
+          this.checkResult = null;
+          try {
+            const res = await fetch('/api/keys/check', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ key: this.checkKey.trim() }),
+            });
+            this.checkResult = await res.json();
+          } catch (e) {
+            this.checkResult = { valid: false, status: 'error', reason: e.message };
+          }
+        },
+        async prevPage() {
+          if (this.offset > 0) {
+            this.offset = Math.max(0, this.offset - this.limit);
+            await this.loadKeys();
+          }
+        },
+        async nextPage() {
+          if (this.offset + this.limit < this.total) {
+            this.offset += this.limit;
+            await this.loadKeys();
+          }
+        },
+        formatDate(iso) {
+          const d = new Date(iso);
+          return d.toLocaleString();
+        },
+      };
+    }
+  </script>
+</body>
+</html>
