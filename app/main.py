@@ -12,7 +12,18 @@ STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="KeyCheck API", description="API for checking keys", version="1.0.0")
+import os
+
+docs_enabled = os.getenv("KEYCHECK_ENV", "development") != "production"
+
+app = FastAPI(
+    title="KeyCheck API",
+    description="API for checking keys",
+    version="1.0.0",
+    docs_url="/docs" if docs_enabled else None,
+    redoc_url="/redoc" if docs_enabled else None,
+    openapi_url="/openapi.json" if docs_enabled else None,
+)
 app.include_router(licenses.router)
 app.include_router(auth.router)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
