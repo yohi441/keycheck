@@ -173,6 +173,33 @@ def test_revoke_key_requires_auth(client):
     assert resp.status_code == 401
 
 
+def test_unrevoke_key(client):
+    """Revoking is a record, not a remote switch, so a mis-click must be undoable."""
+    key = create_key(client).json()["key"]
+    client.post(f"/api/keys/{key}/revoke", headers=AUTH)
+    resp = client.post(f"/api/keys/{key}/unrevoke", headers=AUTH)
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "active"
+    assert client.get(f"/api/keys/{key}", headers=AUTH).json()["status"] == "active"
+
+
+def test_unrevoke_an_active_key_is_a_no_op(client):
+    key = create_key(client).json()["key"]
+    resp = client.post(f"/api/keys/{key}/unrevoke", headers=AUTH)
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "active"
+
+
+def test_unrevoke_unknown_key(client):
+    resp = client.post("/api/keys/AAAA-BBBB-CCCC-DDDD/unrevoke", headers=AUTH)
+    assert resp.status_code == 404
+
+
+def test_unrevoke_key_requires_auth(client):
+    resp = client.post("/api/keys/AAAA-BBBB-CCCC-DDDD/unrevoke")
+    assert resp.status_code == 401
+
+
 def test_login_success(client):
     resp = client.post("/api/auth/login", json={"username": "admin", "password": "admin"})
     assert resp.status_code == 200

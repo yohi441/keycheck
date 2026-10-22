@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Clinic Manager Keys · KeyCheck Admin</title>
+  <script defer src="/static/vendor/alpine.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    [x-cloak] { display: none !important; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #f3f4f6; color: #111827; }
+    header {
+      background: #1f2937;
+      color: #fff;
+      padding: .9rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    header h1 { font-size: 1.1rem; }
+    header nav { display: flex; align-items: center; gap: .6rem; }
+    .nav-link {
+      color: #d1d5db;
+      text-decoration: none;
+      font-size: .85rem;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: .45rem .9rem;
+    }
+    .nav-link:hover { background: #374151; color: #fff; border-color: #4b5563; }
+    header button {
+      background: #374151;
+      color: #fff;
+      border: 1px solid #4b5563;
+      border-radius: 8px;
+      padding: .45rem .9rem;
+      cursor: pointer;
+      font-size: .85rem;
+    }
+    header button:hover { background: #4b5563; }
+    main { max-width: 960px; margin: 1.5rem auto; padding: 0 1rem; }
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+      padding: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+    .card h2 { font-size: 1rem; margin-bottom: 1rem; }
+    .error {
+      padding: .6rem .75rem;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #b91c1c;
+      border-radius: 8px;
+      font-size: .85rem;
+      margin-bottom: 1rem;
+    }
+    label { font-size: .8rem; font-weight: 600; display: block; margin-bottom: .25rem; }
+    .row { display: flex; gap: .75rem; flex-wrap: wrap; align-items: flex-end; }
+    .field { flex: 1; min-width: 150px; }
+    .field.wide { flex: 2; }
+    input, select {
+      width: 100%;
+      padding: .5rem .6rem;
+      border: 1px solid #d1d5db;
+      border-radius: 7px;
+      font-size: .9rem;
+    }
+    input:focus, select:focus { outline: 2px solid #2563eb; border-color: transparent; }
+    .hint { font-size: .78rem; color: #6b7280; margin-top: .35rem; line-height: 1.4; }
+    .hint.bad { color: #b45309; }
+    button.primary {
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      padding: .55rem 1rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button.primary:hover { background: #1d4ed8; }
+    button.primary:disabled { opacity: .6; cursor: not-allowed; }
+    button.danger {
+      background: #fff;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+      border-radius: 7px;
+      padding: .4rem .8rem;
+      cursor: pointer;
+      font-size: .8rem;
+    }
+    button.danger:hover { background: #fef2f2; }
+    button.ghost {
+      background: #fff;
+      color: #374151;
+      border: 1px solid #d1d5db;
+      border-radius: 7px;
+      padding: .4rem .7rem;
+      cursor: pointer;
+      font-size: .8rem;
+      white-space: nowrap;
+    }
+    button.ghost:hover { background: #f3f4f6; }
+    .actions { display: flex; gap: .35rem; justify-content: flex-end; flex-wrap: wrap; }
+    table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    th, td { text-align: left; padding: .6rem .5rem; border-bottom: 1px solid #e5e7eb; }
+    th { color: #6b7280; font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; }
+    code { font-family: ui-monospace, monospace; font-size: .85rem; }
+    .badge {
+      display: inline-block;
+      padding: .15rem .55rem;
+      border-radius: 999px;
+      font-size: .72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .badge.active { background: #dcfce7; color: #166534; }
+    .badge.revoked { background: #fee2e2; color: #991b1b; }
+    .pager { display: flex; align-items: center; gap: .75rem; margin-top: 1rem; font-size: .85rem; color: #6b7280; }
+    .pager button { background: #fff; border: 1px solid #d1d5db; border-radius: 7px; padding: .35rem .75rem; cursor: pointer; }
+    .pager button:disabled { opacity: .4; cursor: not-allowed; }
+    .result { padding: .9rem; border-radius: 8px; font-size: .9rem; }
+    .result.ok { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; }
+    .key-box {
+      background: #fff;
+      border: 1px solid #a7f3d0;
+      border-radius: 7px;
+      padding: .6rem .7rem;
+      margin-top: .5rem;
+      word-break: break-all;
+      user-select: all;
+    }
+    .key-box code { font-size: .8rem; color: #111827; }
+    td .key-box {
+      margin-top: 0;
+      background: #f9fafb;
+      border-color: #e5e7eb;
+    }
+    .muted { color: #6b7280; }
+    .empty { color: #9ca3af; text-align: center; padding: 1.5rem 0; }
+    .footnote { font-size: .78rem; color: #6b7280; margin-top: .9rem; line-height: 1.45; }
+  </style>
+</head>
+<body x-data="signedKeys()" x-init="init()">
+
+  <header>
+    <h1>Clinic Manager Keys</h1>
+    <nav>
+      <a class="nav-link" href="/dashboard">Dashboard</a>
+      <button @click="logout">Sign out</button>
+    </nav>
+  </header>
+
+  <main>
+    <div class="error" x-show="error" x-text="error"></div>
+
+    <div class="card">
+      <h2>Issue a key</h2>
+      <form @submit.prevent="issue">
+        <div class="row">
+          <div class="field wide">
+            <label for="clinic">Clinic name</label>
+            <input id="clinic" type="text" x-model="form.clinic" placeholder="John's Eye Clinic" required>
+          </div>
+          <div class="field">
+            <label for="serial">Serial</label>
+            <input id="serial" type="text" x-model="form.serial" placeholder="0007" required>
+          </div>
+        </div>
+        <div class="row" style="margin-top:.9rem">
+          <div class="field wide">
+            <label for="machine">Machine code</label>
+            <input id="machine" type="text" x-model="form.machine_code"
+                   placeholder="3ARN-47PE-L5RN-WPVU" autocomplete="off"
+                   style="text-transform:uppercase">
+            <p class="hint" :class="machineOk() ? '' : 'bad'"
+               x-text="machineOk()
+                 ? 'The 16-character code on the customer’s activation screen. Leave blank for a site-wide key that works on any machine.'
+                 : 'A machine code is 16 characters in groups of four. This one is ' + machineLength() + '.'"></p>
+          </div>
+          <button class="primary" type="submit"
+                  :disabled="issuing || !machineOk()"
+                  x-text="issuing ? 'Issuing…' : 'Issue key'"></button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card" x-show="issued" x-cloak>
+      <h2>Issued key</h2>
+      <div class="result ok">
+        <div><strong>VALID</strong> — <span x-text="issued && issued.clinic"></span></div>
+        <div class="muted" style="font-size:.82rem;margin-top:.25rem">
+          serial <span x-text="issued && issued.serial"></span> ·
+          <span x-text="issued && issued.machine_bound ? ('machine ' + issued.machine_code) : 'site-wide (any machine)'"></span>
+          · issued <span x-text="issued && issued.issued"></span>
+        </div>
+        <div class="key-box"><code x-text="issued && issued.key"></code></div>
+        <button class="primary" style="margin-top:.7rem" @click="copyKey"
+                x-text="issued && copiedKey === issued.key ? 'Copied' : 'Copy key'"></button>
+      </div>
+      <p class="footnote">
+        Send this key to the customer. Their app verifies it offline — it never
+        contacts this server. Issuing the same clinic, serial and machine on the
+        same day produces the same key, so a lost key can be recovered from the
+        table below at any time.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>Signed keys <span class="muted" x-text="'(' + total + ' total)'"></span></h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Clinic</th>
+            <th>Key</th>
+            <th>Machine</th>
+            <th>Issued</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="k in keys" :key="k.key">
+            <tr>
+              <td>
+                <strong x-text="k.clinic"></strong>
+                <div class="muted" style="font-size:.75rem" x-text="'serial ' + (k.serial || '?')"></div>
+              </td>
+              <td>
+                <code :title="k.key" x-text="k.key.slice(0, 16) + '…'"></code>
+              </td>
+              <td><code x-text="k.machine_code || 'site-wide'"></code></td>
+              <td x-text="formatDate(k.created_at)"></td>
+              <td><span class="badge" :class="k.status" x-text="k.status"></span></td>
+              <td>
+                <div class="actions">
+                  <button class="ghost" @click="toggleKey(k.key)"
+                          x-text="openKey === k.key ? 'Hide' : 'Show key'"></button>
+                  <button class="ghost" @click="copyValue(k.key)"
+                          x-text="copiedKey === k.key ? 'Copied' : 'Copy'"></button>
+                  <button class="danger" x-show="k.status === 'active'" @click="revoke(k.key)">Revoke</button>
+                  <button class="ghost" x-show="k.status === 'revoked'" @click="unrevoke(k.key)">Un-revoke</button>
+                </div>
+              </td>
+            </tr>
+            <tr x-show="openKey === k.key" x-cloak>
+              <td colspan="6">
+                <div class="key-box"><code x-text="k.key"></code></div>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+      <div class="empty" x-show="!loading && keys.length === 0">No signed keys issued yet.</div>
+
+      <div class="pager" x-show="total > limit">
+        <button @click="prevPage" :disabled="offset === 0">‹ Prev</button>
+        <span x-text="(keys.length ? offset + 1 : 0) + '–' + (offset + keys.length) + ' of ' + total"></span>
+        <button @click="nextPage" :disabled="offset + limit >= total">Next ›</button>
+      </div>
+
+      <p class="footnote">
+        Every row keeps its full key, so refreshing this page never loses one —
+        use <strong>Show key</strong> or <strong>Copy</strong>. Revoking marks a
+        key void in this table only. The app checks keys offline, so a key
+        already installed keeps working — revoke is a record that you will not
+        reissue it, not a remote kill switch. A mis-click is undoable with
+        <strong>Un-revoke</strong>.
+      </p>
+    </div>
+  </main>
+
+  <script>
+    function signedKeys() {
+      return {
+        token: '',
+        loading: false,
+        issuing: false,
+        error: '',
+        copiedKey: '',
+        openKey: '',
+        copyTimer: null,
+        form: { clinic: '', serial: '', machine_code: '' },
+        issued: null,
+        keys: [],
+        total: 0,
+        limit: 10,
+        offset: 0,
+
+        async init() {
+          this.token = localStorage.getItem('keycheck_token');
+          if (!this.token) {
+            window.location.href = '/login';
+            return;
+          }
+          await this.loadKeys();
+        },
+        authHeaders() {
+          return { 'Authorization': 'Bearer ' + this.token, 'Content-Type': 'application/json' };
+        },
+        logout() {
+          localStorage.removeItem('keycheck_token');
+          window.location.href = '/login';
+        },
+
+        // Client-side shape check only: strips the separators a customer is
+        // likely to paste, then requires 16 characters. The server remains
+        // authoritative and its 422 message is shown verbatim if this is
+        // somehow bypassed.
+        machineLength() {
+          return (this.form.machine_code || '').replace(/[\s-]/g, '').length;
+        },
+        machineOk() {
+          const n = this.machineLength();
+          return n === 0 || n === 16;
+        },
+
+        async loadKeys() {
+          this.loading = true;
+          this.error = '';
+          try {
+            // kind=signed keeps this page from ever showing the legacy random
+            // keys, including in the total used for pagination.
+            const res = await fetch(
+              `/api/keys?kind=signed&limit=${this.limit}&offset=${this.offset}`,
+              { headers: this.authHeaders() }
+            );
+            if (res.status === 401) { this.logout(); return; }
+            if (!res.ok) throw new Error('Failed to load keys');
+            const data = await res.json();
+            this.keys = data.items;
+            this.total = data.total;
+          } catch (e) {
+            this.error = e.message;
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        async issue() {
+          this.issuing = true;
+          this.error = '';
+          this.copiedKey = '';
+          try {
+            const res = await fetch('/api/keys/sign', {
+              method: 'POST',
+              headers: this.authHeaders(),
+              body: JSON.stringify({
+                clinic: this.form.clinic,
+                serial: this.form.serial,
+                machine_code: this.form.machine_code,
+              }),
+            });
+            if (res.status === 401) { this.logout(); return; }
+            const data = await res.json();
+            if (!res.ok) {
+              // 503 = no signing seed on the server; 422 = bad input. Both
+              // carry a sentence written for a human, so show it as-is.
+              this.error = data.detail || 'Failed to issue key';
+              return;
+            }
+            this.issued = data;
+            await this.loadKeys();
+          } catch (e) {
+            this.error = e.message;
+          } finally {
+            this.issuing = false;
+          }
+        },
+
+        async copyKey() {
+          if (!this.issued) return;
+          await this.copyValue(this.issued.key);
+        },
+
+        // One clipboard routine for both the "Issued key" card and the table
+        // rows, so a key can always be retrieved after a refresh.
+        async copyValue(text) {
+          if (!text) return;
+          try {
+            await navigator.clipboard.writeText(text);
+          } catch (e) {
+            // Clipboard API needs a secure context; fall back so this still
+            // works when the dashboard is reached over plain http on a LAN.
+            const box = document.createElement('textarea');
+            box.value = text;
+            box.style.position = 'fixed';
+            box.style.opacity = '0';
+            document.body.appendChild(box);
+            box.select();
+            try { document.execCommand('copy'); } catch (_) { /* ignore */ }
+            document.body.removeChild(box);
+          }
+          this.copiedKey = text;
+          clearTimeout(this.copyTimer);
+          this.copyTimer = setTimeout(() => { this.copiedKey = ''; }, 2000);
+        },
+
+        // Only one key is expanded at a time, so a long list stays readable.
+        toggleKey(key) {
+          this.openKey = this.openKey === key ? '' : key;
+        },
+
+        async revoke(key) {
+          if (!confirm('Mark this key as revoked?')) return;
+          this.error = '';
+          try {
+            const res = await fetch(`/api/keys/${encodeURIComponent(key)}/revoke`, {
+              method: 'POST',
+              headers: this.authHeaders(),
+            });
+            if (res.status === 401) { this.logout(); return; }
+            if (!res.ok) throw new Error('Failed to revoke key');
+            await this.loadKeys();
+          } catch (e) {
+            this.error = e.message;
+          }
+        },
+
+        async unrevoke(key) {
+          this.error = '';
+          try {
+            const res = await fetch(`/api/keys/${encodeURIComponent(key)}/unrevoke`, {
+              method: 'POST',
+              headers: this.authHeaders(),
+            });
+            if (res.status === 401) { this.logout(); return; }
+            if (!res.ok) throw new Error('Failed to un-revoke key');
+            await this.loadKeys();
+          } catch (e) {
+            this.error = e.message;
+          }
+        },
+
+        prevPage() {
+          if (this.offset > 0) {
+            this.offset = Math.max(0, this.offset - this.limit);
+            this.loadKeys();
+          }
+        },
+        nextPage() {
+          if (this.offset + this.limit < this.total) {
+            this.offset += this.limit;
+            this.loadKeys();
+          }
+        },
+        formatDate(iso) {
+          if (!iso) return '';
+          const d = new Date(iso);
+          return isNaN(d.getTime()) ? iso : d.toLocaleString();
+        },
+      };
+    }
+  </script>
+</body>
+</html>

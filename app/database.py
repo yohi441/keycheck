@@ -3,7 +3,11 @@ from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
-DATABASE_URL = "sqlite:///./keycheck.db"
+import os
+
+# Configurable so a deployment (and a test) can point at a specific file. The
+# default preserves the original behaviour: ./keycheck.db beside the service.
+DATABASE_URL = os.getenv("KEYCHECK_DATABASE_URL", "sqlite:///./keycheck.db")
 
 engine = create_engine(
     DATABASE_URL, 

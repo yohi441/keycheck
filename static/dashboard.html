@@ -105,7 +105,10 @@
 
   <header>
     <h1>KeyCheck Admin</h1>
-    <button @click="logout">Sign out</button>
+    <nav style="display:flex;align-items:center;gap:.6rem">
+      <a href="/signed-keys" style="color:#d1d5db;text-decoration:none;font-size:.85rem;padding:.45rem .9rem;border-radius:8px">Clinic Manager keys</a>
+      <button @click="logout">Sign out</button>
+    </nav>
   </header>
 
   <main>
@@ -116,10 +119,17 @@
       <div class="check-result" :class="checkResult && checkResult.valid ? 'ok' : 'fail'">
         <template x-if="checkResult">
           <span>
-            <strong x-text="checkResult.valid ? 'VALID' : checkResult.status.toUpperCase()"></strong>
+            <strong x-text="checkResult.valid ? 'VALID' : (checkResult.status ? checkResult.status.toUpperCase() : 'INVALID')"></strong>
             <span x-text="checkResult.reason ? ' — ' + checkResult.reason : ''"></span>
             <template x-if="checkResult.remaining_uses !== null && checkResult.remaining_uses !== undefined">
               <span x-text="' — remaining uses: ' + checkResult.remaining_uses"></span>
+            </template>
+            <template x-if="checkResult.signed">
+              <span>
+                <span x-text="' — clinic: ' + (checkResult.clinic || '?')"></span>
+                <span x-text="' — serial: ' + (checkResult.serial || '?')"></span>
+                <span x-text="checkResult.machine_bound ? (' — machine: ' + checkResult.machine_code) : ' — site-wide (any machine)'"></span>
+              </span>
             </template>
           </span>
         </template>
@@ -131,10 +141,14 @@
       <div class="row">
         <div class="field">
           <label for="checkkey">License key</label>
-          <input id="checkkey" type="text" x-model="checkKey" placeholder="XXXX-XXXX-XXXX-XXXX" @keyup.enter="check">
+          <input id="checkkey" type="text" x-model="checkKey" placeholder="XXXX-XXXX-XXXX-XXXX or CLN1-…" @keyup.enter="check">
         </div>
         <button class="primary" @click="check">Check</button>
       </div>
+      <p class="muted" style="margin-top:.5rem;font-size:.82rem">
+        Signed keys (CLN1-…) are verified against the vendor public key.
+        Checking one never consumes a use.
+      </p>
     </div>
 
     <div class="card">
@@ -160,6 +174,7 @@
         <thead>
           <tr>
             <th>Key</th>
+            <th>Type</th>
             <th>Status</th>
             <th>Created</th>
             <th>Expires</th>
@@ -170,11 +185,18 @@
         <tbody>
           <template x-for="k in keys" :key="k.key">
             <tr>
-              <td><code x-text="k.key"></code></td>
+              <td>
+                <code x-text="k.kind === 'signed' ? (k.clinic || 'signed key') : k.key"></code>
+                <div class="muted" style="font-size:.75rem" x-show="k.kind === 'signed'"
+                     x-text="k.serial ? ('serial ' + k.serial) : ''"></div>
+                <div class="muted" style="font-size:.75rem" x-show="k.kind === 'signed'"
+                     x-text="k.machine_code ? ('machine ' + k.machine_code) : 'site-wide'"></div>
+              </td>
+              <td><span class="muted" x-text="k.kind === 'signed' ? 'signed' : 'random'"></span></td>
               <td><span class="badge" :class="k.status" x-text="k.status"></span></td>
               <td x-text="formatDate(k.created_at)"></td>
               <td x-text="k.expires_at ? formatDate(k.expires_at) : 'Never'"></td>
-              <td x-text="k.used_uses + ' / ' + k.max_uses"></td>
+              <td x-text="k.kind === 'signed' ? 'n/a' : (k.used_uses + ' / ' + k.max_uses)"></td>
               <td>
                 <button class="danger" x-show="k.status === 'active'" @click="revokeKey(k.key)">Revoke</button>
               </td>
@@ -279,13 +301,27 @@
         async check() {
           if (!this.checkKey.trim()) return;
           this.checkResult = null;
+          const key = this.checkKey.trim();
           try {
-            const res = await fetch('/api/keys/check', {
+            // Two kinds of key live here. A signed CLN1- key is verified by
+            // the server's public key and must not go to /check, whose use
+            // counter would consume it. A random key goes to /check as
+            // before. Detect by prefix rather than by trying both, so a
+            // signed key is never put through the counter even once.
+            const isSigned = key.toUpperCase().startsWith('CLN1-');
+            const res = await fetch(isSigned ? '/api/keys/verify' : '/api/keys/check', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ key: this.checkKey.trim() }),
+              body: JSON.stringify({ key }),
             });
-            this.checkResult = await res.json();
+            const data = await res.json();
+            if (isSigned) {
+              // /verify has no `status`; mark it so the result panel can show
+              // the key's details as well as valid/invalid.
+              this.checkResult = { ...data, status: data.valid ? 'valid' : 'invalid', signed: true };
+            } else {
+              this.checkResult = data;
+            }
           } catch (e) {
             this.checkResult = { valid: false, status: 'error', reason: e.message };
           }

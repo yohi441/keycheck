@@ -3,6 +3,7 @@ uvicorn[standard]
 sqlalchemy
 pydantic
 pyjwt
+python-dotenv
 
 # dev
 pytest
