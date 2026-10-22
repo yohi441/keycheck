@@ -281,5 +281,6 @@ curl http://127.0.0.1:8000/health
 | `/api/keys/sign` returns `503` | `KEYCHECK_LICENSE_SEED` unset or malformed | The message says which. The seed must be 64 hex characters |
 | `/api/keys/verify` returns `503` | No seed and no `KEYCHECK_LICENSE_PUBLIC_KEY` | Set one of them |
 | App rejects a key the server says is valid | The app's public key and the server's seed disagree | Check `KEYCHECK_LICENSE_PUBLIC_KEY` against the app's `LICENSE_PUBLIC_KEY`. They are different values: the seed signs, the public key verifies |
+| `ModuleNotFoundError: No module named 'app.secrets'` | The checkout is older than that module — it was once caught by the `secrets.*` ignore rule and missing from the repo | `git pull` and restart. `pytest tests/test_packaging.py` now fails if any source file exists locally but is absent from the repository |
 | `/health` says `degraded` | Schema not migrated | Check the service logs; the migration runs automatically at startup |
 | A customer's key stopped working | The seed was regenerated | The seed is the only thing that can sign; a changed seed means every previously issued key is invalid |

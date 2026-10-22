@@ -25,6 +25,11 @@ dist/
 *.cer
 credentials*
 secrets.*
+# ...but app/secrets.py is source code (it loads env vars), not a credential
+# file. A bare `secrets.*` matched it too and silently kept it out of the
+# repository, which broke a deployment: local tests passed and the server
+# could not import its own router.
+!app/secrets.py
 
 # Database
 *.db
